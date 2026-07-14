@@ -237,6 +237,8 @@ export default function ReviewPage() {
       sessionStorage.setItem("roomId", data.roomId);
       sessionStorage.setItem("shortCode", data.shortCode);
       sessionStorage.setItem("hostId", data.hostId);
+      sessionStorage.setItem(`hostId_${data.roomId}`, data.hostId);
+      sessionStorage.setItem(`participant_${data.roomId}`, data.hostId);
       sessionStorage.setItem("merchantName", merchantName);
 
       // Clean up scan data

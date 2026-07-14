@@ -435,8 +435,8 @@ export default function RoomClient({
                 <div>
                   <p className="font-medium text-sm">
                     {split.participantId === participantId
-                      ? `👤 ${split.displayName} (Kamu)`
-                      : split.displayName}
+                      ? `👤 ${split.displayName} (Kamu${split.participantId === sessionStorage.getItem(`hostId_${room.id}`) ? ", Host" : ""})`
+                      : `${split.displayName}${split.participantId === sessionStorage.getItem(`hostId_${room.id}`) ? " (Host)" : ""}`}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     Menu: {formatRupiah(split.subtotal)} + Pajak:{" "}
@@ -474,7 +474,9 @@ export default function RoomClient({
           {mySplit && mySplit.total > 0 && (
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-muted-foreground">
-                Kamu harus bayar:
+                {participantId === sessionStorage.getItem(`hostId_${room.id}`)
+                  ? "Porsi kamu:"
+                  : "Kamu harus bayar:"}
               </span>
               <span className="font-bold text-xl text-primary">
                 {formatRupiah(mySplit.total)}
