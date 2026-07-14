@@ -27,34 +27,41 @@ export function calculateSplit(
   // Track unassigned items
   const unassignedItems: string[] = [];
 
-  // Build assignment lookup: itemId → participantIds[]
-  const itemAssignments = new Map<string, string[]>();
+  // Build assignment lookup: itemId → Array<{ participantId: string, quantity: number }>
+  const itemAssignments = new Map<string, Array<{ participantId: string; quantity: number }>>();
   for (const a of assignments) {
     const existing = itemAssignments.get(a.item_id) || [];
-    existing.push(a.participant_id);
+    existing.push({
+      participantId: a.participant_id,
+      quantity: a.assigned_quantity || 1, // Fallback for older database rows
+    });
     itemAssignments.set(a.item_id, existing);
   }
 
-  // Initialize per-person subtotals (using precise floating point for now)
+  // Initialize per-person subtotals
   const personSubtotals = new Map<string, number>();
   for (const p of participants) {
     personSubtotals.set(p.id, 0);
   }
 
-  // Step 1 & 2: Split each item among assigned participants
+  // Step 1 & 2: Calculate each participant's portion cost for items
   for (const item of items) {
-    const assignedIds = itemAssignments.get(item.id);
-    if (!assignedIds || assignedIds.length === 0) {
+    const assignedList = itemAssignments.get(item.id);
+    if (!assignedList || assignedList.length === 0) {
       unassignedItems.push(item.id);
       continue;
     }
 
-    const lineTotal = item.unit_price * item.quantity;
-    const sharePerPerson = lineTotal / assignedIds.length;
+    // Check if the item is not fully claimed (sum of portions < item.quantity)
+    const totalClaimedQty = assignedList.reduce((sum, a) => sum + a.quantity, 0);
+    if (totalClaimedQty < item.quantity) {
+      unassignedItems.push(item.id);
+    }
 
-    for (const pid of assignedIds) {
-      const current = personSubtotals.get(pid) ?? 0;
-      personSubtotals.set(pid, current + sharePerPerson);
+    for (const assign of assignedList) {
+      const portionCost = assign.quantity * item.unit_price;
+      const current = personSubtotals.get(assign.participantId) ?? 0;
+      personSubtotals.set(assign.participantId, current + portionCost);
     }
   }
 

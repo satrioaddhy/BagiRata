@@ -127,7 +127,7 @@ export default function RoomClient({
     }
   }
 
-  async function toggleAssignment(itemId: string) {
+  async function handleUpdateQuantity(itemId: string, newQty: number) {
     if (!participantId) return;
 
     setTogglingItems((prev) => new Set(prev).add(itemId));
@@ -139,12 +139,13 @@ export default function RoomClient({
         body: JSON.stringify({
           item_id: itemId,
           participant_id: participantId,
+          quantity: newQty,
         }),
       });
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error);
+        throw new Error(data.error || "Gagal memperbarui pilihan");
       }
     } catch (err) {
       toast.error(
@@ -190,25 +191,35 @@ export default function RoomClient({
     }
   }
 
-  // Check which items current participant has selected
-  function isItemSelected(itemId: string): boolean {
-    if (!participantId) return false;
-    return assignments.some(
+  // Get claimed quantity for current participant
+  function getMyClaimedQty(itemId: string): number {
+    if (!participantId) return 0;
+    const assignment = assignments.find(
       (a) => a.item_id === itemId && a.participant_id === participantId
     );
+    return assignment?.assigned_quantity || 0;
   }
 
-  // Count how many people share an item
-  function getAssignmentCount(itemId: string): number {
-    return assignments.filter((a) => a.item_id === itemId).length;
+  // Get total claimed quantity across all participants for an item
+  function getTotalClaimedQty(itemId: string): number {
+    return assignments
+      .filter((a) => a.item_id === itemId)
+      .reduce((sum, a) => sum + (a.assigned_quantity || 1), 0);
   }
 
-  // Get assignee names for an item
-  function getAssigneeNames(itemId: string): string[] {
+  // Get assignee names and their quantities for an item
+  function getAssigneeNamesAndQuantities(itemId: string): Array<{ name: string; quantity: number }> {
     const itemAssignments = assignments.filter((a) => a.item_id === itemId);
     return itemAssignments
-      .map((a) => participants.find((p) => p.id === a.participant_id)?.display_name)
-      .filter(Boolean) as string[];
+      .map((a) => {
+        const p = participants.find((p) => p.id === a.participant_id);
+        if (!p) return null;
+        return {
+          name: p.display_name,
+          quantity: a.assigned_quantity || 1,
+        };
+      })
+      .filter(Boolean) as Array<{ name: string; quantity: number }>;
   }
 
   if (authLoading) {
@@ -297,7 +308,7 @@ export default function RoomClient({
         <Card className="p-3 rounded-xl border-accent/50 bg-accent/10 mb-4">
           <p className="text-sm text-accent-foreground">
             ⚠️ Ada {splitResult!.unassignedItems.length} item yang belum
-            dipilih siapa pun
+            sepenuhnya diklaim
           </p>
         </Card>
       )}
@@ -308,40 +319,73 @@ export default function RoomClient({
           Menu
         </h2>
         {items.map((item) => {
-          const selected = isItemSelected(item.id);
-          const count = getAssignmentCount(item.id);
-          const names = getAssigneeNames(item.id);
+          const myClaimedQty = getMyClaimedQty(item.id);
+          const totalClaimedAcrossAll = getTotalClaimedQty(item.id);
+          const assignees = getAssigneeNamesAndQuantities(item.id);
           const toggling = togglingItems.has(item.id);
           const isUnassigned = splitResult?.unassignedItems.includes(item.id);
 
           return (
             <Card
               key={item.id}
-              className={`p-3 rounded-xl transition-all duration-200 cursor-pointer
-                         ${selected ? "border-primary/50 bg-primary/5" : "border-border/50"}
+              className={`p-3 rounded-xl transition-all duration-200
+                         ${myClaimedQty > 0 ? "border-primary/50 bg-primary/5" : "border-border/50"}
                          ${isUnassigned ? "border-accent/50" : ""}
                          ${toggling ? "opacity-60" : ""}
-                         active:scale-[0.98]`}
-              onClick={() => !toggling && toggleAssignment(item.id)}
+                         ${item.quantity === 1 || (item.quantity > 1 && myClaimedQty === 0 && totalClaimedAcrossAll < item.quantity) ? "cursor-pointer active:scale-[0.98]" : ""}`}
+              onClick={() => {
+                if (toggling) return;
+                if (item.quantity === 1) {
+                  handleUpdateQuantity(item.id, myClaimedQty === 0 ? 1 : 0);
+                } else if (myClaimedQty === 0 && totalClaimedAcrossAll < item.quantity) {
+                  handleUpdateQuantity(item.id, 1);
+                }
+              }}
             >
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  checked={selected}
-                  disabled={toggling}
-                  className="mt-1 pointer-events-none"
-                  onCheckedChange={() => {}}
-                />
+              <div className="flex items-center gap-3">
+                {item.quantity > 1 ? (
+                  <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-7 w-7 rounded-lg"
+                      disabled={toggling || myClaimedQty === 0}
+                      onClick={() => handleUpdateQuantity(item.id, myClaimedQty - 1)}
+                    >
+                      <span className="text-xs font-bold">-</span>
+                    </Button>
+                    <span className="w-5 text-center font-semibold text-xs">
+                      {myClaimedQty}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-7 w-7 rounded-lg"
+                      disabled={toggling || totalClaimedAcrossAll >= item.quantity}
+                      onClick={() => handleUpdateQuantity(item.id, myClaimedQty + 1)}
+                    >
+                      <span className="text-xs font-bold">+</span>
+                    </Button>
+                  </div>
+                ) : (
+                  <Checkbox
+                    checked={myClaimedQty > 0}
+                    disabled={toggling}
+                    className="pointer-events-none"
+                    onCheckedChange={() => {}}
+                  />
+                )}
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start gap-2">
                     <div className="min-w-0">
                       <p className="font-medium text-sm truncate">
                         {item.name}
                       </p>
-                      {item.quantity > 1 && (
+                      {item.quantity > 1 ? (
                         <p className="text-xs text-muted-foreground">
-                          {item.quantity}x {formatRupiah(item.unit_price)}
+                          {totalClaimedAcrossAll} dari {item.quantity} porsi diklaim • {formatRupiah(item.unit_price)}/porsi
                         </p>
-                      )}
+                      ) : null}
                     </div>
                     <p className="font-semibold text-sm flex-shrink-0">
                       {formatRupiah(item.unit_price * item.quantity)}
@@ -349,18 +393,15 @@ export default function RoomClient({
                   </div>
 
                   {/* Show who selected this item */}
-                  {count > 0 && (
+                  {assignees.length > 0 && (
                     <div className="mt-1.5 flex items-center gap-1 flex-wrap">
-                      <span className="text-xs text-muted-foreground">
-                        {count > 1 ? `${count} orang:` : ""}
-                      </span>
-                      {names.map((name) => (
+                      {assignees.map((a) => (
                         <Badge
-                          key={name}
+                          key={a.name}
                           variant="secondary"
                           className="text-[10px] px-1.5 py-0 rounded-full"
                         >
-                          {name}
+                          {a.name} ({a.quantity}x)
                         </Badge>
                       ))}
                     </div>

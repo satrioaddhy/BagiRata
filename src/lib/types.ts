@@ -41,6 +41,7 @@ export interface Assignment {
   id: string;
   item_id: string;
   participant_id: string;
+  assigned_quantity: number;
 }
 
 /** Scan job status */

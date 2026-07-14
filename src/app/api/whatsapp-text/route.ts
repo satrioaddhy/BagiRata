@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
         id: a.id as string,
         item_id: a.item_id as string,
         participant_id: a.participant_id as string,
+        assigned_quantity: (a.assigned_quantity as number) || 1,
       })
     );
 
