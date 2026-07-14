@@ -38,9 +38,42 @@ export default function ReviewPage() {
   const [accountNumber, setAccountNumber] = useState("");
   const [qrisFile, setQrisFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load scan result from sessionStorage
+  // Load scan result or draft from sessionStorage
   useEffect(() => {
+    const draft = sessionStorage.getItem("reviewDraft");
+    if (draft) {
+      try {
+        const data = JSON.parse(draft);
+        setItems(data.items || []);
+        setMerchantName(data.merchantName || "");
+        setTaxAmount(data.taxAmount || 0);
+        setIsAutoTax(!!data.isAutoTax);
+        setServiceChargeAmount(data.serviceChargeAmount || 0);
+        setHostName(data.hostName || "");
+        setBankName(data.bankName || "");
+        setAccountName(data.accountName || "");
+        setAccountNumber(data.accountNumber || "");
+        setStep(data.step || "items");
+
+        // Also load confidence if available
+        const storedScan = sessionStorage.getItem("scanResult");
+        if (storedScan) {
+          try {
+            const scan = JSON.parse(storedScan);
+            setConfidence(scan.confidence || null);
+          } catch {
+            // Ignore
+          }
+        }
+        setIsLoaded(true);
+        return;
+      } catch (err) {
+        console.error("Failed to load reviewDraft:", err);
+      }
+    }
+
     const stored = sessionStorage.getItem("scanResult");
     if (stored) {
       try {
@@ -58,10 +91,11 @@ export default function ReviewPage() {
             source: "scan" as const,
           }))
         );
-      } catch {
+      } catch (err) {
         // Invalid data, start fresh
       }
     }
+    setIsLoaded(true);
   }, []);
 
   const subtotal = items.reduce(
@@ -75,6 +109,36 @@ export default function ReviewPage() {
       setTaxAmount(Math.round(subtotal * 0.11));
     }
   }, [isAutoTax, subtotal]);
+
+  // Save draft to sessionStorage on state changes
+  useEffect(() => {
+    if (!isLoaded) return;
+    const draftState = {
+      items,
+      merchantName,
+      taxAmount,
+      isAutoTax,
+      serviceChargeAmount,
+      hostName,
+      bankName,
+      accountName,
+      accountNumber,
+      step,
+    };
+    sessionStorage.setItem("reviewDraft", JSON.stringify(draftState));
+  }, [
+    isLoaded,
+    items,
+    merchantName,
+    taxAmount,
+    isAutoTax,
+    serviceChargeAmount,
+    hostName,
+    bankName,
+    accountName,
+    accountNumber,
+    step,
+  ]);
 
   const grandTotal = subtotal + taxAmount + serviceChargeAmount;
 
@@ -178,6 +242,7 @@ export default function ReviewPage() {
       // Clean up scan data
       sessionStorage.removeItem("scanResult");
       sessionStorage.removeItem("scanJobId");
+      sessionStorage.removeItem("reviewDraft");
 
       router.push("/buat/share");
     } catch (err) {

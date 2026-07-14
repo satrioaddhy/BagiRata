@@ -26,6 +26,7 @@ export default function BuatPage() {
       // Store result in sessionStorage and navigate to review
       sessionStorage.setItem("scanResult", JSON.stringify(result));
       sessionStorage.setItem("scanJobId", jobId);
+      sessionStorage.removeItem("reviewDraft");
       router.push("/buat/review");
     }
   }, [status, result, jobId, router]);
@@ -90,6 +91,7 @@ export default function BuatPage() {
   function goToManualEntry() {
     sessionStorage.removeItem("scanResult");
     sessionStorage.removeItem("scanJobId");
+    sessionStorage.removeItem("reviewDraft");
     router.push("/buat/review");
   }
 
