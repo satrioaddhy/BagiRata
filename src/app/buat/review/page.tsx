@@ -144,7 +144,7 @@ export default function ReviewPage() {
           qris_path: qrisPath,
           items: items.map((i) => ({
             name: i.name,
-            quantity: i.quantity,
+            quantity: i.quantity || 1,
             unit_price: i.unit_price,
             source: i.source,
           })),
@@ -312,12 +312,12 @@ export default function ReviewPage() {
                         <Input
                           type="number"
                           min={1}
-                          value={item.quantity}
+                          value={item.quantity === 0 ? "" : item.quantity}
                           onChange={(e) =>
                             updateItem(
                               item.id,
                               "quantity",
-                              parseInt(e.target.value) || 1
+                              parseInt(e.target.value) || 0
                             )
                           }
                           className="rounded-lg h-9 text-sm"
@@ -330,7 +330,7 @@ export default function ReviewPage() {
                         <Input
                           type="number"
                           min={0}
-                          value={item.unit_price}
+                          value={item.unit_price === 0 ? "" : item.unit_price}
                           onChange={(e) =>
                             updateItem(
                               item.id,
@@ -371,7 +371,7 @@ export default function ReviewPage() {
                 id="tax"
                 type="number"
                 min={0}
-                value={taxAmount}
+                value={taxAmount === 0 ? "" : taxAmount}
                 onChange={(e) => setTaxAmount(parseInt(e.target.value) || 0)}
                 className="rounded-xl h-11"
               />
@@ -384,7 +384,7 @@ export default function ReviewPage() {
                 id="service"
                 type="number"
                 min={0}
-                value={serviceChargeAmount}
+                value={serviceChargeAmount === 0 ? "" : serviceChargeAmount}
                 onChange={(e) =>
                   setServiceChargeAmount(parseInt(e.target.value) || 0)
                 }
