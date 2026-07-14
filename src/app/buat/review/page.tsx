@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { formatRupiah } from "@/lib/utils";
 import type { ScanResult, ScanResultItem } from "@/lib/types";
@@ -28,6 +29,7 @@ export default function ReviewPage() {
   const [items, setItems] = useState<EditableItem[]>([]);
   const [merchantName, setMerchantName] = useState("");
   const [taxAmount, setTaxAmount] = useState(0);
+  const [isAutoTax, setIsAutoTax] = useState(false);
   const [serviceChargeAmount, setServiceChargeAmount] = useState(0);
   const [confidence, setConfidence] = useState<string | null>(null);
   const [hostName, setHostName] = useState("");
@@ -66,6 +68,14 @@ export default function ReviewPage() {
     (sum, item) => sum + item.unit_price * item.quantity,
     0
   );
+
+  // Auto-calculate tax if enabled
+  useEffect(() => {
+    if (isAutoTax) {
+      setTaxAmount(Math.round(subtotal * 0.11));
+    }
+  }, [isAutoTax, subtotal]);
+
   const grandTotal = subtotal + taxAmount + serviceChargeAmount;
 
   function addItem() {
@@ -364,16 +374,29 @@ export default function ReviewPage() {
           {/* Tax & Service Charge */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label htmlFor="tax" className="text-sm font-medium mb-1.5 block">
-                Pajak (Rp)
-              </Label>
+              <div className="flex items-center justify-between mb-1.5">
+                <Label htmlFor="tax" className="text-sm font-medium block">
+                  Pajak (Rp)
+                </Label>
+                <div className="flex items-center gap-1.5">
+                  <Checkbox
+                    id="autoTax"
+                    checked={isAutoTax}
+                    onCheckedChange={(checked) => setIsAutoTax(!!checked)}
+                  />
+                  <Label htmlFor="autoTax" className="text-xs font-normal text-muted-foreground cursor-pointer select-none">
+                    Pajak 11%
+                  </Label>
+                </div>
+              </div>
               <Input
                 id="tax"
                 type="number"
                 min={0}
                 value={taxAmount === 0 ? "" : taxAmount}
                 onChange={(e) => setTaxAmount(parseInt(e.target.value) || 0)}
-                className="rounded-xl h-11"
+                disabled={isAutoTax}
+                className={`rounded-xl h-11 transition-all ${isAutoTax ? "bg-muted text-muted-foreground opacity-80" : ""}`}
               />
             </div>
             <div>
