@@ -190,6 +190,24 @@ export default function ReviewPage() {
     }
   }
 
+  function handleNextToPayment() {
+    if (items.length === 0) {
+      toast.error("Tambahkan minimal satu item");
+      return;
+    }
+    for (const item of items) {
+      if (!item.name.trim()) {
+        toast.error("Semua item harus memiliki nama");
+        return;
+      }
+      if (item.unit_price <= 0) {
+        toast.error(`Harga "${item.name || 'item'}" harus lebih dari 0`);
+        return;
+      }
+    }
+    setStep("payment");
+  }
+
   return (
     <main className="flex-1 flex flex-col px-4 py-6 max-w-lg mx-auto w-full">
       {/* Header */}
@@ -442,7 +460,7 @@ export default function ReviewPage() {
           </Card>
 
           <Button
-            onClick={() => setStep("payment")}
+            onClick={handleNextToPayment}
             disabled={items.length === 0}
             className="w-full h-12 rounded-xl font-semibold text-base mt-2"
           >
