@@ -94,6 +94,12 @@ export async function POST(request: NextRequest) {
       lines.push(`atau scan QRIS di link ya 🙏`);
     }
 
+    // Append unassigned items warning if any
+    if (result.unassignedItems.length > 0) {
+      lines.push(``);
+      lines.push(`⚠️ *Catatan:* Masih ada ${result.unassignedItems.length} item menu yang belum diklaim.`);
+    }
+
     lines.push(``);
     lines.push(`Makasih banyak! 🙏`);
     lines.push(`_Dibuat via BagiRata_`);

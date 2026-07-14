@@ -56,9 +56,9 @@ export default function RoomClient({
   const [qrisUrl, setQrisUrl] = useState<string | null>(null);
   const [showPayment, setShowPayment] = useState(false);
 
-  // Check if current user already joined (by checking sessionStorage)
+  // Check if current user already joined (by checking localStorage)
   useEffect(() => {
-    const storedParticipantId = sessionStorage.getItem(
+    const storedParticipantId = localStorage.getItem(
       `participant_${room.id}`
     );
     if (storedParticipantId) {
@@ -116,7 +116,7 @@ export default function RoomClient({
       const participant = await res.json();
       setParticipantId(participant.id);
       setJoined(true);
-      sessionStorage.setItem(`participant_${room.id}`, participant.id);
+      localStorage.setItem(`participant_${room.id}`, participant.id);
       toast.success(`Selamat datang, ${displayName.trim()}! 🎉`);
     } catch (err) {
       toast.error(
@@ -435,8 +435,8 @@ export default function RoomClient({
                 <div>
                   <p className="font-medium text-sm">
                     {split.participantId === participantId
-                      ? `👤 ${split.displayName} (Kamu${split.participantId === sessionStorage.getItem(`hostId_${room.id}`) ? ", Host" : ""})`
-                      : `${split.displayName}${split.participantId === sessionStorage.getItem(`hostId_${room.id}`) ? " (Host)" : ""}`}
+                      ? `👤 ${split.displayName} (Kamu${split.participantId === localStorage.getItem(`hostId_${room.id}`) ? ", Host" : ""})`
+                      : `${split.displayName}${split.participantId === localStorage.getItem(`hostId_${room.id}`) ? " (Host)" : ""}`}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     Menu: {formatRupiah(split.subtotal)} + Pajak:{" "}
@@ -474,7 +474,7 @@ export default function RoomClient({
           {mySplit && mySplit.total > 0 && (
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-muted-foreground">
-                {participantId === sessionStorage.getItem(`hostId_${room.id}`)
+                {participantId === localStorage.getItem(`hostId_${room.id}`)
                   ? "Porsi kamu:"
                   : "Kamu harus bayar:"}
               </span>
